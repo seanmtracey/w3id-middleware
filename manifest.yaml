@@ -1,0 +1,6 @@
+---
+applications:
+- name: sean-tracey-london-w3id-middleware
+  memory: 512M
+  instances: 1
+  

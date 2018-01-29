@@ -15,9 +15,9 @@ const SAML_CONFIG = {
 
 debug(SAML);
 
-function patchSAMLRequest(request, response, next) {
+function patchSAMLRequest(req, res, next) {
     try {
-        const xmlData = new Buffer(request.body.SAMLResponse, 'base64').toString('utf-8');
+        const xmlData = new Buffer(req.body.SAMLResponse, 'base64').toString('utf-8');
 
         // Parse XML into DOM
         const doc = new xmldom.DOMParser().parseFromString(xmlData);
@@ -46,7 +46,7 @@ function patchSAMLRequest(request, response, next) {
             );
         });
 
-        request.body.SAMLResponse = new Buffer(doc.toString(), 'utf-8').toString('base64');
+        req.body.SAMLResponse = new Buffer(doc.toString(), 'utf-8').toString('base64');
         next();
     } catch (error) {
         // Presuming bad SAMLResponse just pass it through
@@ -96,7 +96,7 @@ router.get('/__auth_fail', (req, res, next) => {
 module.exports = (req, res, next) => {
     debug('Request passed through w3id-middleware');
 
-    if (request.isAuthenticated()) {
+    if (req.isAuthenticated()) {
         next();
         return;
     } else {
