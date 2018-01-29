@@ -100,7 +100,7 @@ module.exports = (req, res, next) => {
         next();
         return;
     } else {
-        res.redirect('/__auth_fail');
+        res.redirect('/__auth');
     }
 
 };
