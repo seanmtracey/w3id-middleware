@@ -96,7 +96,7 @@ router.get('/__auth_fail', (req, res, next) => {
 module.exports = (req, res, next) => {
     debug('Request passed through w3id-middleware');
 
-    if (req.isAuthenticated()) {
+    if (req.isAuthenticated() || req.path === '/__auth') {
         next();
         return;
     } else {
