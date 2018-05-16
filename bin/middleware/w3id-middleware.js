@@ -1,9 +1,11 @@
 const debug = require('debug')('bin:middleware:w3id-middleware');
-const passport = require('passport')
-const SAML = require('passport-saml');
-const xmldom = require('xmldom');
-const xpath = require('xpath');
+const xml2js = require('xml2js').parseString;
+const saml2 = require('saml2-js');
 const X509Cert = "-----BEGIN CERTIFICATE-----\n" + process.env.W3ID_CERT + "\n-----END CERTIFICATE-----";
+
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+
 const router = require('express').Router();
 
 const SAML_CONFIG = {
@@ -13,94 +15,71 @@ const SAML_CONFIG = {
     cert : X509Cert,
 };
 
-debug(SAML);
+debug(SAML_CONFIG);
 
-function patchSAMLRequest(req, res, next) {
-    try {
-        const xmlData = new Buffer(req.body.SAMLResponse, 'base64').toString('utf-8');
+var sp_options = {
+    entity_id: process.env.W3ID_PARTNER_ID,
+    private_key: X509Cert,
+    certificate: X509Cert,
+    assert_endpoint: process.env.W3ID_IDP_LOGIN_URL
+};
 
-        // Parse XML into DOM
-        const doc = new xmldom.DOMParser().parseFromString(xmlData);
-        const signedInfos = xpath.select('//*[local-name()=\'SignedInfo\']', doc);
-        const assertions = xpath.select('//*[local-name()=\'Assertion\']', doc);
+var sp = new saml2.ServiceProvider(sp_options);
 
-        signedInfos.forEach((signedInfo) => {
-            signedInfo.setAttribute(
-                'xmlns:ds',
-                'http://www.w3.org/2000/09/xmldsig#'
-            );
-        });
+var idp_options = {
+    sso_login_url: process.env.W3ID_IDP_LOGIN_URL,
+    certificates: X509Cert
+};
 
-        assertions.forEach((assertion) => {
-            assertion.setAttribute(
-                'xmlns:saml',
-                'urn:oasis:names:tc:SAML:2.0:assertion'
-            );
-            assertion.setAttribute(
-                'xmlns:xs',
-                'http://www.w3.org/2001/XMLSchema'
-            );
-            assertion.setAttribute(
-                'xmlns:xsi',
-                'http://www.w3.org/2001/XMLSchema-instance'
-            );
-        });
+var idp = new saml2.IdentityProvider(idp_options);
 
-        req.body.SAMLResponse = new Buffer(doc.toString(), 'utf-8').toString('base64');
-        next();
-    } catch (error) {
-        // Presuming bad SAMLResponse just pass it through
-        next(error);
-        return;
-    }
-}
+// router.use(bodyParser.json());
+// router.use(bodyParser.urlencoded({ extended: false }));
+// router.use(cookieParser());
 
+bodyParser.json(), bodyParser.urlencoded({ extended: false }), cookieParser(),
 
-function verifyUser(user, done) {
-    done(null, user);
-}
+router.get('/__auth', (req, res, next) => {
 
-function serializeUser(user, done) {
-    done(null, user.uid);
-}
+    sp.create_login_request_url(idp, {}, function(err, login_url, request_id) {
+        if (err !== null){
+            return res.send(500);
+        } else {
+            debug(login_url);
+            res.redirect(login_url);
+        }
+      });
 
-function deserializeUser(userId, done) {
-    const user = User.findById(userId);
-
-    if (!user) {
-        done(new Error(`User with id ${userId} not found`), false);
-        return;
-    }
-
-    done(null, user);
-
-}
-
-// Add SAML strategy to passport.
-passport.use(new SAML.Strategy(SAML_CONFIG, verifyUser));
-debug('SAML %s Authentication Enabled');
-
-debug('passport:', passport);
-
-// passport.serializeUser(serializeUser);
-// passport.deserializeUser(deserializeUser);
-
-router.get('/__auth', passport.authenticate('saml'));
-router.post('/__auth', patchSAMLRequest, passport.authenticate('saml', { successRedirect: '/', failureRedirect: '/__auth_fail' }));
-
-router.get('/__auth_fail', (req, res, next) => {
-    debug('/__auth_fail:', req);
-    res.send('FAILED TO AUTHENTICATE');
 });
 
-module.exports = (req, res, next) => {
-    debug('Request passed through w3id-middleware');
+router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: false }), cookieParser(), (req, res, next) => {
 
-    if (req.isAuthenticated() || req.path === '/__auth') {
-        next();
-        return;
+    debug('req.body:', req.body);
+
+    const XMLDOC = new Buffer(req.body.SAMLResponse, 'base64').toString('utf-8');
+
+    req.body.stringedSAML = XMLDOC;
+    
+    xml2js(XMLDOC, function (err, result) {
+        debug('samlp:Response:',  result['samlp:Response']);
+    });
+
+    // debug('XMLDOC:', XMLDOC);
+
+    res.json(req.body);
+
+} );
+
+module.exports = router;
+
+/*module.exports = (req, res, next) => {
+
+    if(req.method === "GET" && req.path === '/__auth'){
+
+    } else if(req.method === "POST" && req.path === '/__auth'){
+
     } else {
-        res.redirect('/__auth');
+
     }
 
-};
+};*/
