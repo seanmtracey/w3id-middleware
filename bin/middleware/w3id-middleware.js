@@ -1,9 +1,13 @@
 const debug = require('debug')('bin:middleware:w3id-middleware');
-const passport = require('passport')
-const SAML = require('passport-saml');
-const xmldom = require('xmldom');
-const xpath = require('xpath');
+const xml2js = require('xml2js').parseString;
+const saml2 = require('saml2-js');
 const X509Cert = "-----BEGIN CERTIFICATE-----\n" + process.env.W3ID_CERT + "\n-----END CERTIFICATE-----";
+
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const md5 = require('md5');
+const moment = require('moment');
+
 const router = require('express').Router();
 
 const SAML_CONFIG = {
@@ -13,94 +17,141 @@ const SAML_CONFIG = {
     cert : X509Cert,
 };
 
-debug(SAML);
+debug(SAML_CONFIG);
 
-function patchSAMLRequest(req, res, next) {
-    try {
-        const xmlData = new Buffer(req.body.SAMLResponse, 'base64').toString('utf-8');
+const sp_options = {
+    entity_id: process.env.W3ID_PARTNER_ID,
+    private_key: X509Cert,
+    certificate: X509Cert,
+    assert_endpoint: process.env.W3ID_IDP_LOGIN_URL
+};
 
-        // Parse XML into DOM
-        const doc = new xmldom.DOMParser().parseFromString(xmlData);
-        const signedInfos = xpath.select('//*[local-name()=\'SignedInfo\']', doc);
-        const assertions = xpath.select('//*[local-name()=\'Assertion\']', doc);
+const sp = new saml2.ServiceProvider(sp_options);
 
-        signedInfos.forEach((signedInfo) => {
-            signedInfo.setAttribute(
-                'xmlns:ds',
-                'http://www.w3.org/2000/09/xmldsig#'
-            );
-        });
+const idp_options = {
+    sso_login_url: process.env.W3ID_IDP_LOGIN_URL,
+    certificates: X509Cert
+};
 
-        assertions.forEach((assertion) => {
-            assertion.setAttribute(
-                'xmlns:saml',
-                'urn:oasis:names:tc:SAML:2.0:assertion'
-            );
-            assertion.setAttribute(
-                'xmlns:xs',
-                'http://www.w3.org/2001/XMLSchema'
-            );
-            assertion.setAttribute(
-                'xmlns:xsi',
-                'http://www.w3.org/2001/XMLSchema-instance'
-            );
-        });
+const idp = new saml2.IdentityProvider(idp_options);
 
-        req.body.SAMLResponse = new Buffer(doc.toString(), 'utf-8').toString('base64');
-        next();
-    } catch (error) {
-        // Presuming bad SAMLResponse just pass it through
-        next(error);
-        return;
+const COOKIES_NEEDED_FOR_VALIDATION = ['w3id_userid', 'w3id_sessionid', 'w3id_expiration'];
+
+function generateHashForProperties(userID, sessionID, expiration){
+
+    debug('3:', userID, sessionID, expiration);
+
+    const STR = `${userID}-${sessionID}-${expiration}-${process.env.W3ID_SECRET}`;
+    const hash = md5(STR);
+
+    debug('STR:', STR);
+
+    return hash;
+}
+
+function validateSession(req, res, next){
+
+    debug('validateSession');
+    debug('cookies:', req.cookies);
+
+    const session_hash = req.cookies['w3id_hash'];
+
+    if(!session_hash){
+        debug('No hash to evaluate for session. Redirecting to login.');
+        res.redirect('/__auth');
+    } else {
+
+        const missing_cookies = COOKIES_NEEDED_FOR_VALIDATION.map(cookieRequired => {
+
+                debug('Looking for:', cookieRequired);
+                debug('Found: ', req.cookies[cookieRequired]);
+
+                if(!req.cookies[cookieRequired]){
+                    return cookieRequired;
+                } else {
+                    return null;
+                }
+            })
+            .filter(isNullValue => isNullValue !== null)
+        ;
+
+        if(missing_cookies.length > 0){
+            debug(`Missing cookies required to validate session '${missing_cookies.join(`', '`)}'. Redirecting to login.`);
+            res.redirect('/__auth');
+        } else {
+            
+            const generated_hash = generateHashForProperties(  decodeURIComponent( req.cookies['w3id_userid'] ),  decodeURIComponent( req.cookies['w3id_sessionid']),  decodeURIComponent( req.cookies['w3id_expiration'] ) );
+
+            debug(`generated_hash: ${generated_hash} session_hash: ${session_hash} eq?: ${generated_hash === session_hash}`);
+            
+            if(generated_hash === session_hash){
+                debug('Session is valid. Allowing request to continue.');
+                next();
+            } else {
+                debug('Session has been tampered with. Invalidating session.');
+                res.redirect('/__auth');
+            }
+
+
+        }
+
     }
-}
-
-
-function verifyUser(user, done) {
-    done(null, user);
-}
-
-function serializeUser(user, done) {
-    done(null, user.uid);
-}
-
-function deserializeUser(userId, done) {
-    const user = User.findById(userId);
-
-    if (!user) {
-        done(new Error(`User with id ${userId} not found`), false);
-        return;
-    }
-
-    done(null, user);
 
 }
 
-// Add SAML strategy to passport.
-passport.use(new SAML.Strategy(SAML_CONFIG, verifyUser));
-debug('SAML %s Authentication Enabled');
+router.get('/__auth', (req, res, next) => {
 
-debug('passport:', passport);
+    sp.create_login_request_url(idp, {}, function(err, login_url, request_id) {
+        if (err !== null){
+            return res.send(500);
+        } else {
+            debug(login_url);
+            res.redirect(login_url);
+        }
+      });
 
-// passport.serializeUser(serializeUser);
-// passport.deserializeUser(deserializeUser);
-
-router.get('/__auth', passport.authenticate('saml'));
-router.post('/__auth', patchSAMLRequest, passport.authenticate('saml', { successRedirect: '/', failureRedirect: '/__auth_fail' }));
-
-router.get('/__auth_fail', (req, res, next) => {
-    debug('/__auth_fail:', req);
-    res.send('FAILED TO AUTHENTICATE');
 });
 
-module.exports = (req, res, next) => {
-    debug('Request passed through w3id-middleware');
+router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: false }), cookieParser(), (req, res, next) => {
 
-    if (req.isAuthenticated() || req.path === '/__auth') {
-        next();
-        return;
-    } else {
-        res.redirect('/__auth');
-    }
+    debug('req.body:', req.body);
 
-};
+    const XMLDOC = new Buffer(req.body.SAMLResponse, 'base64').toString('utf-8');
+
+    req.body.stringedSAML = XMLDOC;
+    
+    debug('XMLDOC:', XMLDOC);
+
+    xml2js(XMLDOC, function (err, result) {
+    
+        debug('samlp:Response:',  result['samlp:Response']);
+
+        const userID = result['samlp:Response']['saml:Assertion'][0]['saml:Subject'][0]['saml:NameID'][0]._;
+        const sessionID = result['samlp:Response']['saml:Assertion'][0]['saml:AuthnStatement'][0].$.SessionIndex;
+        const expiration = result['samlp:Response']['saml:Assertion'][0]['saml:AuthnStatement'][0].$.SessionNotOnOrAfter;
+
+        const propertyHash = generateHashForProperties(userID, sessionID, expiration);
+
+        const timeUntilExpirationInSeconds = moment(expiration,  'YYYY-MM-DD HH:mm:ss').diff(moment());
+
+        debug(`COOKIE EXPS >>> expiration: ${expiration} timeUntilExpirationInSeconds: ${timeUntilExpirationInSeconds}`);
+
+        debug('userID:', userID);
+        debug('sessionID:', sessionID);
+        debug('expiration:', expiration);
+        debug('Setting hash:', propertyHash);
+
+        res.cookie( 'w3id_userid', userID, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
+        res.cookie( 'w3id_sessionid', sessionID, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
+        res.cookie( 'w3id_expiration', expiration, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
+        res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
+        
+        res.json(result['samlp:Response']);
+    
+    });
+
+} );
+
+router.all('*', [ bodyParser.json(), bodyParser.urlencoded({ extended: false }), cookieParser() ], validateSession);
+
+module.exports = router;
