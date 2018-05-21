@@ -6,6 +6,7 @@ const X509Cert = "-----BEGIN CERTIFICATE-----\n" + process.env.W3ID_CERT + "\n--
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const md5 = require('md5');
+const moment = require('moment');
 
 const router = require('express').Router();
 
@@ -18,21 +19,21 @@ const SAML_CONFIG = {
 
 debug(SAML_CONFIG);
 
-var sp_options = {
+const sp_options = {
     entity_id: process.env.W3ID_PARTNER_ID,
     private_key: X509Cert,
     certificate: X509Cert,
     assert_endpoint: process.env.W3ID_IDP_LOGIN_URL
 };
 
-var sp = new saml2.ServiceProvider(sp_options);
+const sp = new saml2.ServiceProvider(sp_options);
 
-var idp_options = {
+const idp_options = {
     sso_login_url: process.env.W3ID_IDP_LOGIN_URL,
     certificates: X509Cert
 };
 
-var idp = new saml2.IdentityProvider(idp_options);
+const idp = new saml2.IdentityProvider(idp_options);
 
 const COOKIES_NEEDED_FOR_VALIDATION = ['w3id_userid', 'w3id_sessionid', 'w3id_expiration'];
 
@@ -84,10 +85,11 @@ function validateSession(req, res, next){
             debug(`generated_hash: ${generated_hash} session_hash: ${session_hash} eq?: ${generated_hash === session_hash}`);
             
             if(generated_hash === session_hash){
+                debug('Session is valid. Allowing request to continue.');
                 next();
             } else {
-                res.status(401);
-                res.end();
+                debug('Session has been tampered with. Invalidating session.');
+                res.redirect('/__auth');
             }
 
 
@@ -130,22 +132,25 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
 
         const propertyHash = generateHashForProperties(userID, sessionID, expiration);
 
+        const timeUntilExpirationInSeconds = moment(expiration,  'YYYY-MM-DD HH:mm:ss').diff(moment());
+
+        debug(`COOKIE EXPS >>> expiration: ${expiration} timeUntilExpirationInSeconds: ${timeUntilExpirationInSeconds}`);
+
         debug('userID:', userID);
         debug('sessionID:', sessionID);
         debug('expiration:', expiration);
         debug('Setting hash:', propertyHash);
 
-        res.cookie( 'w3id_userid', userID, { httpOnly : false, maxAge : 1000 * 60 * 60 * 24 * 10 } );
-        res.cookie( 'w3id_sessionid', sessionID, { httpOnly : false, maxAge : 1000 * 60 * 60 * 24 * 10 } );
-        res.cookie( 'w3id_expiration', expiration, { httpOnly : false, maxAge : 1000 * 60 * 60 * 24 * 10 } );
-        res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : 1000 * 60 * 60 * 24 * 10 } );
+        res.cookie( 'w3id_userid', userID, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
+        res.cookie( 'w3id_sessionid', sessionID, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
+        res.cookie( 'w3id_expiration', expiration, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
+        res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
         
         res.json(result['samlp:Response']);
     
     });
 
 } );
-
 
 router.all('*', [ bodyParser.json(), bodyParser.urlencoded({ extended: false }), cookieParser() ], validateSession);
 
