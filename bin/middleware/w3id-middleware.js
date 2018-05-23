@@ -36,6 +36,7 @@ const idp_options = {
 const idp = new saml2.IdentityProvider(idp_options);
 
 const COOKIES_NEEDED_FOR_VALIDATION = ['w3id_userid', 'w3id_sessionid', 'w3id_expiration'];
+const HSTS_HEADER_AGE = 86400;
 
 function generateHashForProperties(userID, sessionID, expiration){
 
@@ -60,6 +61,12 @@ function validateSession(req, res, next){
         debug('No hash to evaluate for session. Redirecting to login.');
         res.redirect('/__auth');
     } else {
+
+        if(!req.secure){
+            debug('WARNING: This request is not secure. Request should be made over encrypted connections to avoid valid credentials falling into nefarious hands.');
+            debug('WARNING: This request is not secure. Strict-Transport-Security header has been set.');
+            res.set('Strict-Transport-Security', `max-age=${HSTS_HEADER_AGE}`);
+        }
 
         const missing_cookies = COOKIES_NEEDED_FOR_VALIDATION.map(cookieRequired => {
 
@@ -91,7 +98,6 @@ function validateSession(req, res, next){
                 debug('Session has been tampered with. Invalidating session.');
                 res.redirect('/__auth');
             }
-
 
         }
 
@@ -132,19 +138,19 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
 
         const propertyHash = generateHashForProperties(userID, sessionID, expiration);
 
-        const timeUntilExpirationInSeconds = moment(expiration,  'YYYY-MM-DD HH:mm:ss').diff(moment());
+        const timeUntilExpirationInMilliseconds = moment(expiration,  'YYYY-MM-DD HH:mm:ss').diff(moment()) - 1;
 
-        debug(`COOKIE EXPS >>> expiration: ${expiration} timeUntilExpirationInSeconds: ${timeUntilExpirationInSeconds}`);
+        debug(`COOKIE EXPS >>> expiration: ${expiration} timeUntilExpirationInMilliseconds: ${timeUntilExpirationInMilliseconds}`);
 
         debug('userID:', userID);
         debug('sessionID:', sessionID);
         debug('expiration:', expiration);
         debug('Setting hash:', propertyHash);
 
-        res.cookie( 'w3id_userid', userID, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
-        res.cookie( 'w3id_sessionid', sessionID, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
-        res.cookie( 'w3id_expiration', expiration, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
-        res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : timeUntilExpirationInSeconds } );
+        res.cookie( 'w3id_userid', userID, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
+        res.cookie( 'w3id_sessionid', sessionID, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
+        res.cookie( 'w3id_expiration', expiration, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
+        res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
         
         res.json(result['samlp:Response']);
     
