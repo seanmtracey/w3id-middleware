@@ -91,12 +91,12 @@ function validateSession(req, res, next){
 
             debug(`generated_hash: ${generated_hash} session_hash: ${session_hash} eq?: ${generated_hash === session_hash}`);
             
-            if(generated_hash === session_hash){
-                debug('Session is valid. Allowing request to continue.');
-                next();
-            } else {
+            if(generated_hash !== session_hash){
                 debug('Session has been tampered with. Invalidating session.');
                 res.redirect('/__auth');
+            } else {
+                debug('Session is valid. Allowing request to continue.');
+                next();
             }
 
         }
