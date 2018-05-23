@@ -1,7 +1,6 @@
 const debug = require('debug')('bin:middleware:w3id-middleware');
 const xml2js = require('xml2js').parseString;
 const saml2 = require('saml2-js');
-const X509Cert = "-----BEGIN CERTIFICATE-----\n" + process.env.W3ID_CERT + "\n-----END CERTIFICATE-----";
 
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
@@ -10,6 +9,21 @@ const moment = require('moment');
 
 const router = require('express').Router();
 
+const REQUIRED_ENVIRONMENT_VARIABLES = [ 'W3ID_IDP_LOGIN_URL', 'W3ID_PARTNER_ID', 'W3ID_CERT', 'W3ID_SECRET' ];
+const MISSING_ENVIRONMENT_VARIABLES = REQUIRED_ENVIRONMENT_VARIABLES.map(variable => {
+    if(!process.env[variable]){
+        return variable;
+    } else {
+        return null;
+    }
+}).filter(isNullValue => isNullValue !== null);
+
+if(MISSING_ENVIRONMENT_VARIABLES.length > 0){
+    debug(`Cannot start app. Missing environment variables '${MISSING_ENVIRONMENT_VARIABLES.join(`', '`)}' required for W3ID validation. `);
+    process.exit();
+}
+
+const X509Cert = "-----BEGIN CERTIFICATE-----\n" + process.env.W3ID_CERT + "\n-----END CERTIFICATE-----";
 const SAML_CONFIG = {
     path: '/__auth',
     entryPoint: process.env.W3ID_IDP_LOGIN_URL,
@@ -78,7 +92,7 @@ function validateSession(req, res, next){
                 } else {
                     return null;
                 }
-                
+
             })
             .filter(isNullValue => isNullValue !== null)
         ;
@@ -87,7 +101,7 @@ function validateSession(req, res, next){
             debug(`Missing cookies required to validate session '${missing_cookies.join(`', '`)}'. Redirecting to login.`);
             res.redirect('/__auth');
         } else {
-            
+
             const hashGeneratedFromCookiesAndSecret = generateHashForProperties(  decodeURIComponent( req.cookies['w3id_userid'] ),  decodeURIComponent( req.cookies['w3id_sessionid']),  decodeURIComponent( req.cookies['w3id_expiration'] ) );
 
             if(process.env.NODE_ENV === 'development'){
@@ -128,13 +142,13 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
     }
 
     const XMLDOC = new Buffer(req.body.SAMLResponse, 'base64').toString('utf-8');
-    
+
     if(process.env.NODE_ENV === 'development'){
         debug('XMLDOC:', XMLDOC);
     }
 
     xml2js(XMLDOC, function (err, result) {
-        
+
         if(process.env.NODE_ENV === 'development'){
             debug('samlp:Response:',  result['samlp:Response']);
         }
@@ -147,20 +161,21 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
 
         const timeUntilExpirationInMilliseconds = moment(expiration,  'YYYY-MM-DD HH:mm:ss').diff(moment()) - 1;
 
-        debug(`COOKIE EXPS >>> expiration: ${expiration} timeUntilExpirationInMilliseconds: ${timeUntilExpirationInMilliseconds}`);
-
-        debug('userID:', userID);
-        debug('sessionID:', sessionID);
-        debug('expiration:', expiration);
-        debug('Setting hash:', propertyHash);
+        if(process.env.NODE_ENV === 'development'){        
+            debug(`COOKIE EXPS >>> expiration: ${expiration} timeUntilExpirationInMilliseconds: ${timeUntilExpirationInMilliseconds}`);
+            debug('userID:', userID);
+            debug('sessionID:', sessionID);
+            debug('expiration:', expiration);
+            debug('Setting hash:', propertyHash);
+        }
 
         res.cookie( 'w3id_userid', userID, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
         res.cookie( 'w3id_sessionid', sessionID, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
         res.cookie( 'w3id_expiration', expiration, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
         res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
-        
+
         res.json(result['samlp:Response']);
-    
+
     });
 
 } );
