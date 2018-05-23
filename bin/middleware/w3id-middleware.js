@@ -23,6 +23,11 @@ if(MISSING_ENVIRONMENT_VARIABLES.length > 0){
     process.exit();
 }
 
+if(process.env.W3ID_SECRET.length < 72){
+    debug(`W3ID_SECRET environment variable is not long enough. It must be at least 72 characters long. Currently, it is ${process.env.W3ID_SECRET.length} characters long.`);
+    process.exit();
+}
+
 const X509Cert = "-----BEGIN CERTIFICATE-----\n" + process.env.W3ID_CERT + "\n-----END CERTIFICATE-----";
 const SAML_CONFIG = {
     path: '/__auth',
