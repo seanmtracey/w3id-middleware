@@ -17,8 +17,6 @@ const SAML_CONFIG = {
     cert : X509Cert,
 };
 
-debug(SAML_CONFIG);
-
 const sp_options = {
     entity_id: process.env.W3ID_PARTNER_ID,
     private_key: X509Cert,
@@ -40,20 +38,20 @@ const HSTS_HEADER_AGE = 86400;
 
 function generateHashForProperties(userID, sessionID, expiration){
 
-    debug('3:', userID, sessionID, expiration);
-
+    if(process.env.NODE_ENV === 'development'){
+        debug('generateHashForProperties arguments:', userID, sessionID, expiration);
+    }
     const STR = `${userID}-${sessionID}-${expiration}-${process.env.W3ID_SECRET}`;
     const hash = md5(STR);
-
-    debug('STR:', STR);
 
     return hash;
 }
 
 function validateSession(req, res, next){
 
-    debug('validateSession');
-    debug('cookies:', req.cookies);
+    if(process.env.NODE_ENV === 'development'){
+        debug('cookies:', req.cookies);
+    }
 
     const session_hash = req.cookies['w3id_hash'];
 
@@ -70,14 +68,17 @@ function validateSession(req, res, next){
 
         const missing_cookies = COOKIES_NEEDED_FOR_VALIDATION.map(cookieRequired => {
 
-                debug('Looking for:', cookieRequired);
-                debug('Found: ', req.cookies[cookieRequired]);
+                if(process.env.NODE_ENV === 'development'){
+                    debug('Looking for:', cookieRequired);
+                    debug('Found: ', req.cookies[cookieRequired]);
+                }
 
                 if(!req.cookies[cookieRequired]){
                     return cookieRequired;
                 } else {
                     return null;
                 }
+                
             })
             .filter(isNullValue => isNullValue !== null)
         ;
@@ -87,11 +88,13 @@ function validateSession(req, res, next){
             res.redirect('/__auth');
         } else {
             
-            const generated_hash = generateHashForProperties(  decodeURIComponent( req.cookies['w3id_userid'] ),  decodeURIComponent( req.cookies['w3id_sessionid']),  decodeURIComponent( req.cookies['w3id_expiration'] ) );
+            const hashGeneratedFromCookiesAndSecret = generateHashForProperties(  decodeURIComponent( req.cookies['w3id_userid'] ),  decodeURIComponent( req.cookies['w3id_sessionid']),  decodeURIComponent( req.cookies['w3id_expiration'] ) );
 
-            debug(`generated_hash: ${generated_hash} session_hash: ${session_hash} eq?: ${generated_hash === session_hash}`);
-            
-            if(generated_hash !== session_hash){
+            if(process.env.NODE_ENV === 'development'){
+                debug(`hashGeneratedFromCookiesAndSecret: ${hashGeneratedFromCookiesAndSecret} session_hash: ${session_hash} eq?: ${hashGeneratedFromCookiesAndSecret === session_hash}`);
+            }
+
+            if(hashGeneratedFromCookiesAndSecret !== session_hash){
                 debug('Session has been tampered with. Invalidating session.');
                 res.redirect('/__auth');
             } else {
@@ -120,17 +123,21 @@ router.get('/__auth', (req, res, next) => {
 
 router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: false }), cookieParser(), (req, res, next) => {
 
-    debug('req.body:', req.body);
+    if(process.env.NODE_ENV === 'development'){
+        debug('req.body:', req.body);
+    }
 
     const XMLDOC = new Buffer(req.body.SAMLResponse, 'base64').toString('utf-8');
-
-    req.body.stringedSAML = XMLDOC;
     
-    debug('XMLDOC:', XMLDOC);
+    if(process.env.NODE_ENV === 'development'){
+        debug('XMLDOC:', XMLDOC);
+    }
 
     xml2js(XMLDOC, function (err, result) {
-    
-        debug('samlp:Response:',  result['samlp:Response']);
+        
+        if(process.env.NODE_ENV === 'development'){
+            debug('samlp:Response:',  result['samlp:Response']);
+        }
 
         const userID = result['samlp:Response']['saml:Assertion'][0]['saml:Subject'][0]['saml:NameID'][0]._;
         const sessionID = result['samlp:Response']['saml:Assertion'][0]['saml:AuthnStatement'][0].$.SessionIndex;
