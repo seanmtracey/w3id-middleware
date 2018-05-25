@@ -57,6 +57,9 @@ function validateSession(req, res, next){
 
     const session_hash = req.cookies['w3id_hash'];
 
+    const thirtyMinutesInMilliseconds = 1000 * 60 * 30;
+    res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
+
     if(!session_hash){
         debug('No hash to evaluate for session. Redirecting to login.');
         res.redirect('/__auth');
@@ -162,7 +165,11 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
         res.cookie( 'w3id_expiration', expiration, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
         res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
 
-        res.json(result['samlp:Response']);
+        if(req.cookies['w3id_redirect']){
+            res.redirect(req.cookies['w3id_redirect']);
+        } else {
+            res.redirect('/');
+        }
 
     });
 
