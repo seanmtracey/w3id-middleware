@@ -58,10 +58,10 @@ function validateSession(req, res, next){
     const session_hash = req.cookies['w3id_hash'];
 
     const thirtyMinutesInMilliseconds = 1000 * 60 * 30;
-    res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
 
     if(!session_hash){
         debug('No hash to evaluate for session. Redirecting to login.');
+        res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );        
         res.redirect('/__auth');
     } else {
 
@@ -90,6 +90,7 @@ function validateSession(req, res, next){
 
         if(missing_cookies.length > 0){
             debug(`Missing cookies required to validate session '${missing_cookies.join(`', '`)}'. Redirecting to login.`);
+            res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );            
             res.redirect('/__auth');
         } else {
 
@@ -101,9 +102,11 @@ function validateSession(req, res, next){
 
             if(hashGeneratedFromCookiesAndSecret !== session_hash){
                 debug('Session has been tampered with. Invalidating session.');
+                res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );                
                 res.redirect('/__auth');
             } else {
                 debug('Session is valid. Allowing request to continue.');
+                res.clearCookie('w3id_redirect');                
                 next();
             }
 
@@ -168,9 +171,8 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
         if(req.cookies['w3id_redirect']){
 
             const redirectTo = req.cookies['w3id_redirect']
-            res.clearCookie('w3id_redirect');
             res.redirect(redirectTo);
-            
+
         } else {
             res.redirect('/');
         }
