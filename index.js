@@ -166,7 +166,11 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
         res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
 
         if(req.cookies['w3id_redirect']){
-            res.redirect(req.cookies['w3id_redirect']);
+
+            const redirectTo = req.cookies['w3id_redirect']
+            res.clearCookie('w3id_redirect');
+            res.redirect(redirectTo);
+            
         } else {
             res.redirect('/');
         }
