@@ -55,11 +55,22 @@ function validateSession(req, res, next){
         debug('cookies:', req.cookies);
     }
 
+    const challenge_flag = req.cookies['w3id_challenge'];
     const session_hash = req.cookies['w3id_hash'];
 
     const thirtyMinutesInMilliseconds = 1000 * 60 * 30;
+    
+    if(challenge_flag){
 
-    if(!session_hash){
+        debug(`'Challenge' flag set (w3id_challenge). Invalidating session and forcing reauthenticaion.`);
+        res.clearCookie( 'w3id_userid' );
+        res.clearCookie( 'w3id_sessionid' );
+        res.clearCookie( 'w3id_expiration' );
+        res.clearCookie( 'w3id_hash' );
+        res.clearCookie( 'w3id_challenge' );
+        res.redirect('/__auth');
+
+    } else if(!session_hash){
         debug('No hash to evaluate for session. Redirecting to login.');
         res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );        
         res.redirect('/__auth');
