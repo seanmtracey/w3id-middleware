@@ -192,6 +192,6 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
 
 } );
 
-router.all('*', [ bodyParser.json(), bodyParser.urlencoded({ extended: false }), cookieParser() ], validateSession);
+router.all('*', [ cookieParser() ], validateSession);
 
 module.exports = router;
