@@ -136,7 +136,7 @@ router.get('/__auth', (req, res, next) => {
     sp.create_login_request_url(idp, {}, function(err, login_url, request_id) {
         if (err !== null){
             debug('GET /__auth ERROR:', err);
-            res.send(500);
+            res.status(500).end();
         } else {
             debug(login_url);
             res.redirect(login_url);
