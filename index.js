@@ -55,13 +55,28 @@ function validateSession(req, res, next){
         debug('cookies:', req.cookies);
     }
 
+    const challenge_flag = req.cookies['w3id_challenge'];
     const session_hash = req.cookies['w3id_hash'];
 
     const thirtyMinutesInMilliseconds = 1000 * 60 * 30;
 
-    if(!session_hash){
+    if(process.env.NODE_ENV === 'development'){
+        debug('challenge_flag', challenge_flag);
+    }
+
+    if(challenge_flag){
+
+        debug(`'Challenge' flag set (w3id_challenge). Invalidating session and forcing reauthenticaion.`);
+        res.clearCookie( 'w3id_userid' );
+        res.clearCookie( 'w3id_sessionid' );
+        res.clearCookie( 'w3id_expiration' );
+        res.clearCookie( 'w3id_hash' );
+        res.clearCookie( 'w3id_challenge' );
+        res.redirect(req.originalUrl);
+
+    } else if(!session_hash){
         debug('No hash to evaluate for session. Redirecting to login.');
-        res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );        
+        res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
         res.redirect('/__auth');
     } else {
 
@@ -90,7 +105,7 @@ function validateSession(req, res, next){
 
         if(missing_cookies.length > 0){
             debug(`Missing cookies required to validate session '${missing_cookies.join(`', '`)}'. Redirecting to login.`);
-            res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );            
+            res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
             res.redirect('/__auth');
         } else {
 
@@ -102,11 +117,11 @@ function validateSession(req, res, next){
 
             if(hashGeneratedFromCookiesAndSecret !== session_hash){
                 debug('Session has been tampered with. Invalidating session.');
-                res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );                
+                res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
                 res.redirect('/__auth');
             } else {
                 debug('Session is valid. Allowing request to continue.');
-                res.clearCookie('w3id_redirect');                
+                res.clearCookie('w3id_redirect');
                 next();
             }
 
@@ -120,7 +135,8 @@ router.get('/__auth', (req, res, next) => {
 
     sp.create_login_request_url(idp, {}, function(err, login_url, request_id) {
         if (err !== null){
-            return res.send(500);
+            debug('GET /__auth ERROR:', err);
+            res.status(500).end();
         } else {
             debug(login_url);
             res.redirect(login_url);
@@ -155,7 +171,7 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
 
         const timeUntilExpirationInMilliseconds = moment(expiration,  'YYYY-MM-DD HH:mm:ss').diff(moment()) - 1;
 
-        if(process.env.NODE_ENV === 'development'){        
+        if(process.env.NODE_ENV === 'development'){
             debug(`COOKIE EXPS >>> expiration: ${expiration} timeUntilExpirationInMilliseconds: ${timeUntilExpirationInMilliseconds}`);
             debug('userID:', userID);
             debug('sessionID:', sessionID);
@@ -181,6 +197,6 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
 
 } );
 
-router.all('*', [ bodyParser.json(), bodyParser.urlencoded({ extended: false }), cookieParser() ], validateSession);
+router.all('*', [ cookieParser() ], validateSession);
 
 module.exports = router;
