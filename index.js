@@ -60,6 +60,10 @@ function validateSession(req, res, next){
 
     const thirtyMinutesInMilliseconds = 1000 * 60 * 30;
 
+    if(process.env.NODE_ENV === 'development'){
+        debug('challenge_flag', challenge_flag);
+    }
+
     if(challenge_flag){
 
         debug(`'Challenge' flag set (w3id_challenge). Invalidating session and forcing reauthenticaion.`);
