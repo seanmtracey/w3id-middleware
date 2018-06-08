@@ -122,6 +122,7 @@ function validateSession(req, res, next){
             } else {
                 debug('Session is valid. Allowing request to continue.');
                 res.clearCookie('w3id_redirect');
+                res.locals.w3id_userid = req.cookies['w3id_userid'];
                 next();
             }
 
