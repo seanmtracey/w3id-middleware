@@ -10,7 +10,7 @@ These details for the sessions are stored in the cookies of the client.
 ## Features
 
 - Horizontally Scalable
-    - Sessions are created and validated using a shared key stored in the environment variables of the application. Each server with this key should be able to validate the authenticity of the session
+    - Sessions are created and validated using a shared secret key stored in the environment variables of the application. Each server with this key should be able to validate the authenticity of the session
 
 - Easy to use
     - Two lines of code, secure your application.
@@ -26,7 +26,7 @@ These details for the sessions are stored in the cookies of the client.
 
 ## Usage
 
-To use the W3ID middleare in your application, you will need to register your application with the W3ID self-service systems to create the nesseccary prerequisites. Once you have done so, you can secure your application using the following steps.
+To use the W3ID middleware in your application, you will need to register your application with the W3ID self-service systems to create the nesseccary prerequisites. You can find instructions to do so [here](SELF_SERVICE.md) Once you have done so, you can secure your application using the following steps.
 
 1. Install the module, and save it as a dependency
     ```
@@ -83,7 +83,7 @@ If you wish to force a user to reauthenticate with W3ID, you can set the `w3id_c
 
 ## Notes and Catch-22s
 
-A. The middleware requires the `/__auth` for both the `GET` and `POST` HTTP verbs. If you need to handle traffic on these endpoints, you will not be able to and use this software at the same time.
+A. The middleware requires the `/__auth` for both the `GET` and `POST` HTTP verbs. If you need to handle traffic on these endpoints, you will not be able to use those routes and this middleware at the same time.
 
 B. This middleware will not force connections to use HTTPS, but will warn whenever it detects that a connection is insecure. Take care to secure your services, otherwise valid credentials may fall into the hands of malicious actors, and you won't be able to invalidate them until the original expiration time of the session (up to 24 hours).
 
@@ -105,7 +105,7 @@ The unique partner ID you created for you app in the W3ID self-service applicati
 
 `W3ID_CERT`
 
-The content of the <X509Certificate> element from the XML document generated at the end of the W3ID self-service application. The middleware will handle the creation of the certificate headers and footers, so don't do those yourself.
+The content of the `<X509Certificate>` element from the XML document generated at the end of the W3ID self-service application. The middleware will handle the creation of the certificate headers and footers, so don't do those yourself.
 
 `W3ID_SECRET`
 
