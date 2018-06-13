@@ -16,20 +16,20 @@ app.get('/logout', (req, res, next) => {
   
     res.cookie( 'w3id_challenge', 1, { httpOnly : false, maxAge : oneWeekInMilliseconds } );
     console.log('VARS:', res.cookies, process.env.NODE_ENV);
-    res.render('index', { title : 'Logged out' });
+    res.end();
   
 });
   
 app.get('/', (req, res, next) => {
   
-    res.render('index', { title: 'UNSECURED INDEX' });
+    res.end();
   
 });
   
 app.use(w3id);
   
-app.get('/test',function(req, res, next) {
-    res.render('index', { title: `SECURED ROUTE: USER ${res.locals.w3id_userid}` });
+app.get('/protected',function(req, res, next) {
+    res.end();
 });
 
 module.exports = app;

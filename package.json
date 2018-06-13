@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "private": false,
   "main": "index.js",
+  "scripts": {
+    "test" : "./node_modules/mocha/bin/mocha --exit ./test/test.js"
+  },
   "dependencies": {
     "body-parser": "~1.18.2",
     "cookie-parser": "~1.4.3",
