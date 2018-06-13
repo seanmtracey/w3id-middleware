@@ -132,3 +132,7 @@ A customisable secret to be shared between the instances of the application. Thi
 `NODE_ENV`
 
 If set to `development` the authorisation flow will be verbose. **This means logging out valid authentication information to the user** _do not use this in a production environment, lest you fall victim to a MITM attack!_
+
+## res.locals
+
+For convenience, the user ID of the IBM employee is accessible server side in `res.locals.w3id_userid`.
