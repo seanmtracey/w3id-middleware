@@ -26,7 +26,7 @@ These details for the sessions are stored in the cookies of the client.
 
 ## Usage
 
-To use the W3ID middleware in your application, you will need to register your application with the W3ID self-service systems to create the nesseccary prerequisites. You can find instructions to do so [here](SELF_SERVICE.md) Once you have done so, you can secure your application using the following steps.
+Before you can use the W3ID middleware in your application, you will need to register your application with the W3ID self-service systems to create the nesseccary prerequisites. You can find instructions to do so [here](SELF_SERVICE.md) Once you have done so, you can secure your application using the following steps.
 
 1. Install the module, and save it as a dependency
     ```
@@ -91,7 +91,9 @@ B. This middleware will not force connections to use HTTPS, but will warn whenev
 
 [Diego Hernandez](https://twitter.com/diego_codes) has written an excellent guide to setting yourself up with the W3ID service (his demo application was the basis for my creation of this middleware). 
 
-You can find it on the [IBM Enterprise Github](https://github.ibm.com/Diego-Hernandez/w3-sso-node-passport#provision-application-ibm-sso-service).
+A slightly ammended version of the instructions can be found in [SELF_SERVICE.md](SELF_SERVICE.md).
+
+If you have access to IBM's Enterprise GH account, you can find the original the [IBM Enterprise Github](https://github.ibm.com/Diego-Hernandez/w3-sso-node-passport#provision-application-ibm-sso-service).
 
 ## Required Environment Variables
 
@@ -105,7 +107,7 @@ The unique partner ID you created for you app in the W3ID self-service applicati
 
 `W3ID_CERT`
 
-The content of the `<X509Certificate>` element from the XML document generated at the end of the W3ID self-service application. The middleware will handle the creation of the certificate headers and footers, so don't do those yourself.
+The *content* of the `<X509Certificate>` element from the XML document generated at the end of the W3ID self-service application - _not the entire element_. The middleware will handle the creation of the certificate headers and footers, so don't do those yourself.
 
 `W3ID_SECRET`
 
