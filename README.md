@@ -26,6 +26,15 @@ These details for the sessions are stored in the cookies of the client.
 
 ## Rationale
 
+#### Practicality
+I've written this middleware so as to enable IBMers to have the freedom to experiment with new ideas and services without the fear that it will become available to the general public before it's ready.
+
+Developers shouldn't have to spend time thinking about their security strategy, they should be writing and testing their applications. I hope that this middleware serves that purpose.
+
+#### Cost / time Saving
+Most of the Node.js projects I've seen with a Passport SAML integration have either used an in-memory session store (which forces services to scale vertically, or create sticky sessions across application instances) or run a database instance to manage the session (which might be rarely used, and has an associated cost).
+
+By using cookies, and having a shared secret across application instances, services can scale horizontally (so if the thing you're testing gets a wider audience, there's no need to rearchitect your solution, just remove the middleware), and there's no need for you to run a database.
 
 #### Practicality
 I've written this middleware so as to enable IBMers to have the freedom to experiment with new ideas and services without the fear that it will become available to the general public before it's ready.
