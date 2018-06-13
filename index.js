@@ -201,3 +201,4 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
 router.all('*', [ cookieParser() ], validateSession);
 
 module.exports = router;
+module.exports.generateHashForProperties = generateHashForProperties;
