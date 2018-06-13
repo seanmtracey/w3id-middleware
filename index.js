@@ -1,7 +1,6 @@
 require(`${__dirname}/assert`)();
 
 const debug = require('debug')('w3id-middleware:index');
-const xml2js = require('xml2js').parseString;
 const saml2 = require('saml2-js');
 
 const cookieParser = require('cookie-parser');
@@ -30,7 +29,8 @@ const sp = new saml2.ServiceProvider(sp_options);
 
 const idp_options = {
     sso_login_url: process.env.W3ID_IDP_LOGIN_URL,
-    certificates: X509Cert
+    certificates: X509Cert,
+    allow_unencrypted_assertion : true
 };
 
 const idp = new saml2.IdentityProvider(idp_options);
@@ -151,47 +151,48 @@ router.post('/__auth', bodyParser.json(), bodyParser.urlencoded({ extended: fals
     if(process.env.NODE_ENV === 'development'){
         debug('req.body:', req.body);
     }
-
-    const XMLDOC = new Buffer(req.body.SAMLResponse, 'base64').toString('utf-8');
-
-    if(process.env.NODE_ENV === 'development'){
-        debug('XMLDOC:', XMLDOC);
-    }
-
-    xml2js(XMLDOC, function (err, result) {
-
-        if(process.env.NODE_ENV === 'development'){
-            debug('samlp:Response:',  result['samlp:Response']);
-        }
-
-        const userID = result['samlp:Response']['saml:Assertion'][0]['saml:Subject'][0]['saml:NameID'][0]._;
-        const sessionID = result['samlp:Response']['saml:Assertion'][0]['saml:AuthnStatement'][0].$.SessionIndex;
-        const expiration = result['samlp:Response']['saml:Assertion'][0]['saml:AuthnStatement'][0].$.SessionNotOnOrAfter;
-
-        const propertyHash = generateHashForProperties(userID, sessionID, expiration);
-
-        const timeUntilExpirationInMilliseconds = moment(expiration,  'YYYY-MM-DD HH:mm:ss').diff(moment()) - 1;
-
-        if(process.env.NODE_ENV === 'development'){
-            debug(`COOKIE EXPS >>> expiration: ${expiration} timeUntilExpirationInMilliseconds: ${timeUntilExpirationInMilliseconds}`);
-            debug('userID:', userID);
-            debug('sessionID:', sessionID);
-            debug('expiration:', expiration);
-            debug('Setting hash:', propertyHash);
-        }
-
-        res.cookie( 'w3id_userid', userID, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
-        res.cookie( 'w3id_sessionid', sessionID, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
-        res.cookie( 'w3id_expiration', expiration, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
-        res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
-
-        if(req.cookies['w3id_redirect']){
-
-            const redirectTo = req.cookies['w3id_redirect']
-            res.redirect(redirectTo);
-
+    
+    sp.post_assert(idp, { request_body: { RelayState: req.body.RelayState, SAMLResponse: req.body.SAMLResponse } }, function(err, saml_response) {
+        if(err){
+            debug('Service provider post_assert error:', err);
+            res.status(500);
+            res.end();
         } else {
-            res.redirect('/');
+
+            if(process.env.NODE_ENV === 'development'){
+                debug('saml_response:', JSON.stringify(saml_response));
+            }
+    
+            const userID = saml_response.user.name_id;
+            const sessionID = saml_response.user.session_index;
+            const expiration = saml_response.user.session_not_on_or_after;
+    
+            const propertyHash = generateHashForProperties(userID, sessionID, expiration);
+    
+            const timeUntilExpirationInMilliseconds = moment(expiration,  'YYYY-MM-DD HH:mm:ss').diff(moment()) - 1;
+    
+            if(process.env.NODE_ENV === 'development'){
+                debug(`COOKIE EXPS >>> expiration: ${expiration} timeUntilExpirationInMilliseconds: ${timeUntilExpirationInMilliseconds}`);
+                debug('userID:', userID);
+                debug('sessionID:', sessionID);
+                debug('expiration:', expiration);
+                debug('Setting hash:', propertyHash);
+            }
+    
+            res.cookie( 'w3id_userid', userID, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
+            res.cookie( 'w3id_sessionid', sessionID, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
+            res.cookie( 'w3id_expiration', expiration, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
+            res.cookie( 'w3id_hash', propertyHash, { httpOnly : false, maxAge : timeUntilExpirationInMilliseconds } );
+    
+            if(req.cookies['w3id_redirect']){
+    
+                const redirectTo = req.cookies['w3id_redirect'];
+                res.redirect(redirectTo);
+    
+            } else {
+                res.redirect('/');
+            }
+
         }
 
     });
