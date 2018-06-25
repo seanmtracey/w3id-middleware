@@ -69,11 +69,11 @@ it(`Should make a request to '/' and recieve a 200 status`, function(){
 
 });
 
-it(`Should try to access a protected route ('/protected') and should be redirected to a login URL`, function(){
+it(`Should try to access a protected route ('/protected') and should be redirected to a /__auth`, function(){
 
     return fetch(`http://0.0.0.0:${process.env.port}/protected`, { redirect: 'manual' })
         .then(res => {
-            if(res.status === 302){
+            if(res.status === 302 && res.headers.raw().location[0] === `http://0.0.0.0:${process.env.port}/__auth`){
                 return;
             } else {
                 throw `Recieved a ${res.status} instead of an expected 302`;
@@ -103,7 +103,7 @@ it('Should try to access /protected with a valid session and recieve a 200', fun
 
 });
 
-it('Should try to access /protected with a tampered with session which should then be invalidated.', function(){
+it('Should try to access /protected with a tampered with session which should then be invalidated, and then redirected to /__auth', function(){
 
     return fetch(`http://0.0.0.0:${process.env.port}/protected`, {
             headers : {
@@ -112,7 +112,7 @@ it('Should try to access /protected with a tampered with session which should th
             redirect: 'manual'
         })
         .then(res => {
-            if(res.status === 302){
+            if(res.status === 302 && res.headers.raw().location[0] === `http://0.0.0.0:${process.env.port}/__auth`){
                 return;
             } else {
                 throw `Session was not invalidated in the expected way`;
@@ -122,7 +122,7 @@ it('Should try to access /protected with a tampered with session which should th
 
 });
 
-it(`Should clear session cookies and challenge the user to authenticate after the 'w3id_challenge' cookie is set`, function(){
+it(`Should clear session cookies after the 'w3id_challenge' cookie is set`, function(){
 
     return fetch(`http://0.0.0.0:${process.env.port}/protected`, {
             headers : {
@@ -149,7 +149,7 @@ it(`Should clear session cookies and challenge the user to authenticate after th
 
 });
 
-it(`Should set a 'w3id_redirect' cookie with the value of the path the user tried to access when there is no existing session`, function(){
+it(`Should set a 'w3id_redirect' cookie with the value of the path the user tried to access when there is no existing session, and redirect to /__auth`, function(){
 
     const pathToAccess = `/protected?foo=bar&big=blue`
 
@@ -159,7 +159,7 @@ it(`Should set a 'w3id_redirect' cookie with the value of the path the user trie
             const w3id_cookie = res.headers.raw()['set-cookie'][0];
             const cookieValue =  decodeURIComponent(w3id_cookie.split('; ')[0].split('=')[1]);
 
-            if(cookieValue === pathToAccess){
+            if(cookieValue === pathToAccess && res.headers.raw().location[0] === `http://0.0.0.0:${process.env.port}/__auth`){
                 return;
             } else {
                 throw `w3id_redirect cookie value did not match the intended redirect path`;
