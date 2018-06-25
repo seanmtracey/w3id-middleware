@@ -99,6 +99,8 @@ A. The middleware requires the `/__auth` for both the `GET` and `POST` HTTP verb
 
 B. This middleware will not force connections to use HTTPS, but will warn whenever it detects that a connection is insecure. Take care to secure your services, otherwise valid credentials may fall into the hands of malicious actors, and you won't be able to invalidate them until the original expiration time of the session (up to 24 hours).
 
+C. If the middleware detects at any point that HTTP requests are being made to the server, it will not enforce HTTPS, but it will warn that this is not recommended and set a `Strict-Transport-Security` header. This will not force the user to use HTTPS, however, any browser that respects this header will keep using HTTPS if it is used once for any route by the client.
+
 ## Registering an app with the W3ID self-service application.
 
 [Diego Hernandez](https://twitter.com/diego_codes) has written an excellent guide to setting yourself up with the W3ID service (his demo application was the basis for my creation of this middleware). 

@@ -49,11 +49,26 @@ function generateHashForProperties(userID, sessionID, expiration){
     return hash;
 }
 
+function clearCookies(res){
+
+    res.clearCookie( 'w3id_userid' );
+    res.clearCookie( 'w3id_sessionid' );
+    res.clearCookie( 'w3id_expiration' );
+    res.clearCookie( 'w3id_hash' );
+    res.clearCookie( 'w3id_challenge' );
+
+    return res;
+
+}
+
 function validateSession(req, res, next){
 
     if(process.env.NODE_ENV === 'development'){
         debug('cookies:', req.cookies);
     }
+
+    const NOW = Date.now() / 1000;
+    const EXPIRATION_TIME = req.cookies['w3id_expiration'] !== undefined ? req.cookies['w3id_expiration'] / 1000 : -1;
 
     const challenge_flag = req.cookies['w3id_challenge'];
     const session_hash = req.cookies['w3id_hash'];
@@ -66,13 +81,8 @@ function validateSession(req, res, next){
 
     if(challenge_flag){
 
-        debug(`'Challenge' flag set (w3id_challenge). Invalidating session and forcing reauthenticaion.`);
-        res.clearCookie( 'w3id_userid' );
-        res.clearCookie( 'w3id_sessionid' );
-        res.clearCookie( 'w3id_expiration' );
-        res.clearCookie( 'w3id_hash' );
-        res.clearCookie( 'w3id_challenge' );
-        res.redirect(req.originalUrl);
+        debug(`'Challenge' flag set (w3id_challenge). Invalidating session and forcing reauthentication.`);
+        clearCookies(res).redirect(req.originalUrl);
 
     } else if(!session_hash){
         debug('No hash to evaluate for session. Redirecting to login.');
@@ -107,6 +117,14 @@ function validateSession(req, res, next){
             debug(`Missing cookies required to validate session '${missing_cookies.join(`', '`)}'. Redirecting to login.`);
             res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
             res.redirect('/__auth');
+        } else if(EXPIRATION_TIME - NOW <= 0){
+            
+            if(process.env.NODE_ENV === 'development'){
+                debug(`Session is too old. Invalidating. EXPIRATION_TIME: ${EXPIRATION_TIME} NOW: ${NOW}`);
+            }
+
+            clearCookies(res).redirect('/__auth');
+
         } else {
 
             const hashGeneratedFromCookiesAndSecret = generateHashForProperties(  decodeURIComponent( req.cookies['w3id_userid'] ),  decodeURIComponent( req.cookies['w3id_sessionid']),  decodeURIComponent( req.cookies['w3id_expiration'] ) );

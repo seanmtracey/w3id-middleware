@@ -169,3 +169,27 @@ it(`Should set a 'w3id_redirect' cookie with the value of the path the user trie
     ;
 
 });
+
+it(`Should detect that the session is too old, clear the session cookies, and redirect to /__auth`, function(){
+
+    const OUTDATED_SESSION_TIME = Date.now();
+    const OUTDATED_SESSION_HASH = w3id.generateHashForProperties(TEST_USER_ID, TEST_SESSION_ID, OUTDATED_SESSION_TIME);
+
+    return fetch(`http://0.0.0.0:${process.env.port}/protected`, {
+            headers : {
+                cookie : `w3id_userid=${TEST_USER_ID}; w3id_sessionid=${TEST_SESSION_ID}; w3id_expiration=${OUTDATED_SESSION_TIME}; w3id_hash=${OUTDATED_SESSION_HASH};`
+            },
+            redirect: 'manual'
+        })
+        .then(res => {
+
+            if(res.status === 302 && res.headers.raw().location[0] === `http://0.0.0.0:${process.env.port}/__auth`){
+                return;
+            } else {
+                throw `Middleware did not detect that session was outdated`;
+            }
+
+        })
+    ;
+    
+});
