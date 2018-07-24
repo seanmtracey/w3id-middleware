@@ -1,6 +1,6 @@
 {
   "name": "w3id-middleware",
-  "version": "0.2.2",
+  "version": "0.2.21",
   "private": false,
   "main": "index.js",
   "scripts": {

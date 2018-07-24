@@ -38,7 +38,7 @@ By using cookies, and having a shared secret across application instances, servi
 
 ## Usage
 
-Before you can use the W3ID middleware in your application, you will need to register your application with the W3ID self-service systems to create the nesseccary prerequisites. You can find instructions to do so [here](SELF_SERVICE.md) Once you have done so, you can secure your application using the following steps.
+Before you can use the W3ID middleware in your application, you will need to register your application with the W3ID self-service systems to create the nesseccary prerequisites. You can find instructions to do so [here](SELF_SERVICE.md) (see the  [Notes and Catch-22s](#notes-and-catch-22s) section in this document for details on considerations you'll have to make whilst registering your app). Once you have done so, you can secure your application using the following steps.
 
 1. Install the module, and save it as a dependency
     ```
@@ -100,6 +100,8 @@ A. The middleware requires the `/__auth` for both the `GET` and `POST` HTTP verb
 B. This middleware will not force connections to use HTTPS, but will warn whenever it detects that a connection is insecure. Take care to secure your services, otherwise valid credentials may fall into the hands of malicious actors, and you won't be able to invalidate them until the original expiration time of the session (up to 24 hours).
 
 C. If the middleware detects at any point that HTTP requests are being made to the server, it will not enforce HTTPS, but it will warn that this is not recommended and set a `Strict-Transport-Security` header. This will not force the user to use HTTPS, however, any browser that respects this header will keep using HTTPS if it is used once for any route by the client.
+
+D. When entering the ACS URL as you register your application with W3ID, it must point to the path `/__auth` of your application. For example, if your service is at `https://awsome-thing-i-made.com`, your ACS URL needs to be `https://awsome-thing-i-made.com/__auth` in order for the middleware to successfully complete the authentication process.
 
 ## Registering an app with the W3ID self-service application.
 
