@@ -27,7 +27,11 @@ In order to use the w3id authentication service, you must register your applicat
 
   ![Screenshot 5](documentation/images/ibm_sso_5.jpg)
 
-8. If you already have an SP metadata file to use, go ahead and uploaded. Otherwise, fill out your Entity ID and ACS URL. **Entity ID** refers to a unique ID that is used to identify this current configuration. I recommend your ID includes the word "local" or "development" so that it is easy to differentiate from future staging or production configurations. **[ACS](#assertion-consumer-server-acs) URL**  is the URL the IDP sends a `POST` request to your application with the user's information for Passport to authenticate. In the tutorial application it is `/login`. Click "Next".
+8. If you already have an SP metadata file to use, go ahead and uploaded. Otherwise, fill out your Entity ID and ACS URL. **Entity ID** refers to a unique ID that is used to identify this current configuration. I recommend your ID includes the word "local" or "development" so that it is easy to differentiate from future staging or production configurations. **[ACS](#assertion-consumer-server-acs) URL**  is the URL the IDP sends a `POST` request to your application with the user's information for Passport to authenticate. 
+
+    **For `w3id-middleware` to operate correctly, the ACS URL _must_ be `[YOUR_TARGET_APPLICATION_URL]/__auth` .**
+
+Click "Next".
 
   ![Screenshot 6](documentation/images/ibm_sso_6.jpg)
 
