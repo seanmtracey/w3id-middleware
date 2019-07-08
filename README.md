@@ -68,7 +68,7 @@ Before you can use the W3ID middleware in your application, you will need to reg
     ```
 4. Relax.
 
-## The Authenication Process
+## The Authentication Process
 
 This middleware uses the SAML authentication flow with the W3ID service acting as an identity provider, and this middleware augmenting your application to act as a service provider.
 
@@ -95,7 +95,7 @@ If you wish to force a user to reauthenticate with W3ID, you can set the `w3id_c
 
 ## Notes and Catch-22s
 
-A. The middleware requires the `/__auth` for both the `GET` and `POST` HTTP verbs. If you need to handle traffic on these endpoints, you will not be able to use those routes and this middleware at the same time.
+A. The middleware requires the `/__auth` (**that's two underscores**) for both the `GET` and `POST` HTTP verbs. If you need to handle traffic on these endpoints, you will not be able to use those routes and this middleware at the same time.
 
 B. This middleware will not force connections to use HTTPS, but will warn whenever it detects that a connection is insecure. Take care to secure your services, otherwise valid credentials may fall into the hands of malicious actors, and you won't be able to invalidate them until the original expiration time of the session (up to 24 hours).
 
