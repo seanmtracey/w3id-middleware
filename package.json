@@ -3,6 +3,9 @@
   "version": "0.2.23",
   "private": false,
   "main": "index.js",
+  "engines" : {
+    "node" : ">=10.0.0"
+  },
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha --exit ./test/test.js"
   },
