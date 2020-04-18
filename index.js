@@ -6,7 +6,7 @@ const saml2 = require('saml2-js');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const md5 = require('md5');
-const moment = require('moment');
+const moment = require('dayjs');
 
 const router = require('express').Router();
 

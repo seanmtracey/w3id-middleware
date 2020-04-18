@@ -1,10 +1,10 @@
 {
   "name": "w3id-middleware",
-  "version": "0.2.26",
+  "version": "0.3.0",
   "private": false,
   "main": "index.js",
-  "engines" : {
-    "node" : ">=10.0.0"
+  "engines": {
+    "node": ">=10.0.0"
   },
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha --exit ./test/test.js"
@@ -12,12 +12,12 @@
   "dependencies": {
     "body-parser": "~1.18.2",
     "cookie-parser": "~1.4.3",
+    "dayjs": "^1.8.24",
     "debug": "^2.6.9",
     "dotenv": "^4.0.0",
     "express": "^4.16.3",
     "md5": "^2.2.1",
     "minimist": "^1.2.5",
-    "moment": "^2.22.1",
     "saml2-js": "^2.0.5"
   },
   "devDependencies": {
