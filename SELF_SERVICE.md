@@ -3,7 +3,7 @@
 ### Provision application IBM SSO service
 In order to use the w3id authentication service, you must register your application with the IBM SSO Self-Service Provisioner. This will allow application to make requests to the w3id service and retrieve user data once a user is authenticated.
 
-1. Log into the [IBM SSO Self-Service Provisioner](https://w3.innovate.ibm.com/tools/sso/home.html).
+1. Log into the [IBM SSO Self-Service Provisioner](http://w3.ibm.com/tools/sso).
 
 2. Click "Register w3id application" to start the process.
 
