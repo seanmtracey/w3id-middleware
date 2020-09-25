@@ -1,10 +1,10 @@
 {
   "name": "w3id-middleware",
-  "version": "0.2.27",
+  "version": "0.2.28",
   "private": false,
   "main": "index.js",
-  "engines" : {
-    "node" : ">=10.0.0"
+  "engines": {
+    "node": ">=10.0.0"
   },
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha --exit ./test/test.js"
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "mocha": "^7.1.1",
-    "node-fetch": "^2.1.2"
+    "node-fetch": "^2.6.1",
+    "node-forge": "^0.10.0"
   }
 }
