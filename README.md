@@ -1,6 +1,10 @@
 # W3ID-Middleware
 Middleware for servers running Express.js to secure routes with W3ID
 
+## NO LONGER SUPPORTED 
+
+I've left IBM and this software will no longer be actively supported.
+
 ## Description
 
 This middleware uses W3ID to authenticate users of an Express service. Once a users identity has been validated, a session is created for the user that enable them to access routes for the duration of that session.
