@@ -23,6 +23,8 @@ const TEST_SESSION_ID = 'valid_session_id';
 const TEST_EXPIRATION_TIME = Date.now() + (1000 * 60 * 60);
 const CURRENT_SESSION_HASH = w3id.generateHashForProperties(TEST_USER_ID, TEST_SESSION_ID, TEST_EXPIRATION_TIME);
 
+const WAIT_TIME_TIMEOUT_DURATION = 6000;
+
 server.listen(process.env.port);
 server.on('error', function(err){
     debug('TEST SERVER had an error:', err);
@@ -57,7 +59,7 @@ it('Should wait for the test server to be ready before running tests', function 
 
 it('Should wait for 5 seconds before continuing with the check', function(){
 
-    this.timeout(10000);
+    this.timeout(WAIT_TIME_TIMEOUT_DURATION);
 
     const requestStartTime = new Date() * 1;
 
@@ -92,7 +94,7 @@ it(`Should make a request to '/' and recieve a 200 status`, function(){
 
 it(`Should try to access a protected route ('/protected') and should be redirected to a /__auth`, function(){
     
-    this.timeout(7500);
+    this.timeout(WAIT_TIME_TIMEOUT_DURATION);
 
     return fetch(`http://0.0.0.0:${process.env.port}/protected`, { redirect: 'manual' })
         .then(res => {
@@ -108,7 +110,7 @@ it(`Should try to access a protected route ('/protected') and should be redirect
 
 it('Should try to access /protected with a valid session and recieve a 200', function(){
 
-    this.timeout(7500);
+    this.timeout(WAIT_TIME_TIMEOUT_DURATION);
 
     return fetch(`http://0.0.0.0:${process.env.port}/protected`, {
             headers : {
@@ -130,7 +132,7 @@ it('Should try to access /protected with a valid session and recieve a 200', fun
 
 it('Should try to access /protected with a tampered with session which should then be invalidated, and then redirected to /__auth', function(){
 
-    this.timeout(7500);
+    this.timeout(WAIT_TIME_TIMEOUT_DURATION);
 
     return fetch(`http://0.0.0.0:${process.env.port}/protected`, {
             headers : {
@@ -151,7 +153,7 @@ it('Should try to access /protected with a tampered with session which should th
 
 it(`Should clear session cookies after the 'w3id_challenge' cookie is set`, function(){
 
-    this.timeout(7500);
+    this.timeout(WAIT_TIME_TIMEOUT_DURATION);
 
     return fetch(`http://0.0.0.0:${process.env.port}/protected`, {
             headers : {
@@ -180,7 +182,7 @@ it(`Should clear session cookies after the 'w3id_challenge' cookie is set`, func
 
 it(`Should set a 'w3id_redirect' cookie with the value of the path the user tried to access when there is no existing session, and redirect to /__auth`, function(){
 
-    this.timeout(7500);
+    this.timeout(WAIT_TIME_TIMEOUT_DURATION);
 
     const pathToAccess = `/protected?foo=bar&big=blue`
 
@@ -203,7 +205,7 @@ it(`Should set a 'w3id_redirect' cookie with the value of the path the user trie
 
 it(`Should detect that the session is too old, clear the session cookies, and redirect to /__auth`, function(){
 
-    this.timeout(7500);
+    this.timeout(WAIT_TIME_TIMEOUT_DURATION);
 
     const OUTDATED_SESSION_TIME = Date.now();
     const OUTDATED_SESSION_HASH = w3id.generateHashForProperties(TEST_USER_ID, TEST_SESSION_ID, OUTDATED_SESSION_TIME);
