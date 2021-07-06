@@ -67,7 +67,7 @@ function validateSession(req, res, next){
         debug('cookies:', req.cookies);
     }
 
-    console.warn('This software is no longer supported.');
+    console.warn('w3id-middleware is no longer supported.');
     console.warn('Each request will wait 5 seconds before proceeding from now on');
     console.warn('This wait will increase to 45 seconds on 2021-08-15');
 
