@@ -67,86 +67,100 @@ function validateSession(req, res, next){
         debug('cookies:', req.cookies);
     }
 
-    const NOW = Date.now() / 1000;
-    const EXPIRATION_TIME = req.cookies['w3id_expiration'] !== undefined ? req.cookies['w3id_expiration'] / 1000 : -1;
+    console.warn('This software is no longer supported.');
+    console.warn('Each request will wait 5 seconds before proceeding from now on');
+    console.warn('This wait will increase to 45 seconds on 2021-08-15');
 
-    const challenge_flag = req.cookies['w3id_challenge'];
-    const session_hash = req.cookies['w3id_hash'];
+    const wait = new Promise( (resolve) => {
+        setTimeout(function(){
+            resolve();
+        }, 5000);
+    });
 
-    const thirtyMinutesInMilliseconds = 1000 * 60 * 30;
+    wait.then(() => {
 
-    if(process.env.NODE_ENV === 'development'){
-        debug('challenge_flag', challenge_flag);
-    }
-
-    if(challenge_flag){
-
-        debug(`'Challenge' flag set (w3id_challenge). Invalidating session and forcing reauthentication.`);
-        clearCookies(res).redirect(req.originalUrl);
-
-    } else if(!session_hash){
-        debug('No hash to evaluate for session. Redirecting to login.');
-        res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
-        res.redirect('/__auth');
-    } else {
-
-        if(!req.secure){
-            debug('WARNING: This request is not secure. Request should be made over encrypted connections to avoid valid credentials falling into nefarious hands.');
-            debug('WARNING: This request is not secure. Strict-Transport-Security header has been set.');
-            res.set('Strict-Transport-Security', `max-age=${HSTS_HEADER_AGE}`);
+        const NOW = Date.now() / 1000;
+        const EXPIRATION_TIME = req.cookies['w3id_expiration'] !== undefined ? req.cookies['w3id_expiration'] / 1000 : -1;
+    
+        const challenge_flag = req.cookies['w3id_challenge'];
+        const session_hash = req.cookies['w3id_hash'];
+    
+        const thirtyMinutesInMilliseconds = 1000 * 60 * 30;
+    
+        if(process.env.NODE_ENV === 'development'){
+            debug('challenge_flag', challenge_flag);
         }
-
-        const missing_cookies = COOKIES_NEEDED_FOR_VALIDATION.map(cookieRequired => {
-
-                if(process.env.NODE_ENV === 'development'){
-                    debug('Looking for:', cookieRequired);
-                    debug('Found: ', req.cookies[cookieRequired]);
-                }
-
-                if(!req.cookies[cookieRequired]){
-                    return cookieRequired;
-                } else {
-                    return null;
-                }
-
-            })
-            .filter(isNullValue => isNullValue !== null)
-        ;
-
-        if(missing_cookies.length > 0){
-            debug(`Missing cookies required to validate session '${missing_cookies.join(`', '`)}'. Redirecting to login.`);
+    
+        if(challenge_flag){
+    
+            debug(`'Challenge' flag set (w3id_challenge). Invalidating session and forcing reauthentication.`);
+            clearCookies(res).redirect(req.originalUrl);
+    
+        } else if(!session_hash){
+            debug('No hash to evaluate for session. Redirecting to login.');
             res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
             res.redirect('/__auth');
-        } else if(EXPIRATION_TIME - NOW <= 0){
-            
-            if(process.env.NODE_ENV === 'development'){
-                debug(`Session is too old. Invalidating. EXPIRATION_TIME: ${EXPIRATION_TIME} NOW: ${NOW}`);
-            }
-
-            clearCookies(res).redirect('/__auth');
-
         } else {
-
-            const hashGeneratedFromCookiesAndSecret = generateHashForProperties(  decodeURIComponent( req.cookies['w3id_userid'] ),  decodeURIComponent( req.cookies['w3id_sessionid']),  decodeURIComponent( req.cookies['w3id_expiration'] ) );
-
-            if(process.env.NODE_ENV === 'development'){
-                debug(`hashGeneratedFromCookiesAndSecret: ${hashGeneratedFromCookiesAndSecret} session_hash: ${session_hash} eq?: ${hashGeneratedFromCookiesAndSecret === session_hash}`);
+    
+            if(!req.secure){
+                debug('WARNING: This request is not secure. Request should be made over encrypted connections to avoid valid credentials falling into nefarious hands.');
+                debug('WARNING: This request is not secure. Strict-Transport-Security header has been set.');
+                res.set('Strict-Transport-Security', `max-age=${HSTS_HEADER_AGE}`);
             }
-
-            if(hashGeneratedFromCookiesAndSecret !== session_hash){
-                debug('Session has been tampered with. Invalidating session.');
+    
+            const missing_cookies = COOKIES_NEEDED_FOR_VALIDATION.map(cookieRequired => {
+    
+                    if(process.env.NODE_ENV === 'development'){
+                        debug('Looking for:', cookieRequired);
+                        debug('Found: ', req.cookies[cookieRequired]);
+                    }
+    
+                    if(!req.cookies[cookieRequired]){
+                        return cookieRequired;
+                    } else {
+                        return null;
+                    }
+    
+                })
+                .filter(isNullValue => isNullValue !== null)
+            ;
+    
+            if(missing_cookies.length > 0){
+                debug(`Missing cookies required to validate session '${missing_cookies.join(`', '`)}'. Redirecting to login.`);
                 res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
                 res.redirect('/__auth');
+            } else if(EXPIRATION_TIME - NOW <= 0){
+                
+                if(process.env.NODE_ENV === 'development'){
+                    debug(`Session is too old. Invalidating. EXPIRATION_TIME: ${EXPIRATION_TIME} NOW: ${NOW}`);
+                }
+    
+                clearCookies(res).redirect('/__auth');
+    
             } else {
-                debug('Session is valid. Allowing request to continue.');
-                res.clearCookie('w3id_redirect');
-                res.locals.w3id_userid = req.cookies['w3id_userid'];
-                next();
+    
+                const hashGeneratedFromCookiesAndSecret = generateHashForProperties(  decodeURIComponent( req.cookies['w3id_userid'] ),  decodeURIComponent( req.cookies['w3id_sessionid']),  decodeURIComponent( req.cookies['w3id_expiration'] ) );
+    
+                if(process.env.NODE_ENV === 'development'){
+                    debug(`hashGeneratedFromCookiesAndSecret: ${hashGeneratedFromCookiesAndSecret} session_hash: ${session_hash} eq?: ${hashGeneratedFromCookiesAndSecret === session_hash}`);
+                }
+    
+                if(hashGeneratedFromCookiesAndSecret !== session_hash){
+                    debug('Session has been tampered with. Invalidating session.');
+                    res.cookie( 'w3id_redirect', req.originalUrl, { httpOnly : false, maxAge : thirtyMinutesInMilliseconds } );
+                    res.redirect('/__auth');
+                } else {
+                    debug('Session is valid. Allowing request to continue.');
+                    res.clearCookie('w3id_redirect');
+                    res.locals.w3id_userid = req.cookies['w3id_userid'];
+                    next();
+                }
+    
             }
-
+    
         }
 
-    }
+    });
 
 }
 
